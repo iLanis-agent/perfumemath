@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perfume math - the app</title>
+<style>
+  :root { --ink:#2e2433; --bg:#f5f3f6; --card:#fff; --accent:#5c3a6e; --accent2:#74508a; --soft:#e9dff0; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); padding:18px; }
+  .wrap { max-width:1180px; margin:0 auto; }
+  .lede { text-align:center; color:#5f5468; margin:6px 0 16px; font-size:15px; max-width:760px; margin-left:auto; margin-right:auto; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; }
+  .card { background:var(--card); border-radius:14px; padding:22px; box-shadow:0 1px 3px rgba(60,35,80,.08); }
+  h2 { font-size:19px; margin-bottom:14px; }
+  label { display:block; font-size:13px; color:#6d6376; margin:10px 0 4px; }
+  input { width:100%; padding:9px 10px; border:1px solid #d2c8dc; border-radius:8px; font-size:15px; background:#fcfbfd; }
+  button { width:100%; margin-top:16px; padding:12px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+  button:hover { background:var(--accent2); }
+  .big { font-size:34px; font-weight:700; margin:14px 0 2px; }
+  .cap { font-size:13px; color:#6d6376; }
+  .pill { display:inline-block; margin-top:10px; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:600; }
+  .pill.warm { background:var(--soft); color:var(--accent); }
+  table { width:100%; margin-top:12px; border-collapse:collapse; font-size:14px; }
+  td { padding:7px 0; border-bottom:1px solid #e4dde9; }
+  td:last-child { text-align:right; font-weight:600; }
+  .err { color:#a3341f; font-size:14px; margin-top:10px; }
+  .foot { margin-top:20px; font-size:12.5px; color:#7d7486; line-height:1.6; }
+  .foot a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="lede">The formula says 5 ml of concentrate, the bottle says eau de parfum, and the difference between the two is one division. Run it before you pour the alcohol.</p>
+  <div class="cards">
+    <div class="card">
+      <h2>Hit the concentration</h2>
+      <label for="d_c">Aromatic concentrate (ml)</label>
+      <input id="d_c" type="number" value="5" min="0" step="0.5">
+      <label for="d_p">Target concentration (%)</label>
+      <input id="d_p" type="number" value="20" min="0" step="0.5">
+      <button id="d_go">Dilute it</button>
+      <div class="big" id="d_alc">-</div>
+      <div class="cap">alcohol to add (ml)</div>
+      <div class="pill warm" id="d_verdict" style="display:none"></div>
+      <table id="d_rows" style="display:none">
+        <tr><td>total perfume</td><td id="d_total">-</td></tr>
+      </table>
+      <div class="err" id="d_err"></div>
+    </div>
+    <div class="card">
+      <h2>Drops to milliliters</h2>
+      <label for="dr_d">Drops of this material</label>
+      <input id="dr_d" type="number" value="30" min="0" step="1">
+      <label for="dr_m">Drops per ml (20 is a labeled norm)</label>
+      <input id="dr_m" type="number" value="20" min="0" step="1">
+      <label for="dr_t">Total drops in the formula</label>
+      <input id="dr_t" type="number" value="120" min="0" step="1">
+      <button id="dr_go">Convert the drops</button>
+      <div class="big" id="dr_ml">-</div>
+      <div class="cap">milliliters</div>
+      <div class="pill warm" id="dr_verdict" style="display:none"></div>
+      <table id="dr_rows" style="display:none">
+        <tr><td>share of the blend</td><td id="dr_pct">-</td></tr>
+      </table>
+      <div class="err" id="dr_err"></div>
+    </div>
+    <div class="card">
+      <h2>Scale the formula</h2>
+      <label for="s_a">Base note parts</label>
+      <input id="s_a" type="number" value="3" min="0" step="1">
+      <label for="s_b">Heart note parts</label>
+      <input id="s_b" type="number" value="2" min="0" step="1">
+      <label for="s_c">Top note parts</label>
+      <input id="s_c" type="number" value="1" min="0" step="1">
+      <label for="s_t">Total concentrate to make (ml)</label>
+      <input id="s_t" type="number" value="10" min="0" step="0.5">
+      <button id="s_go">Scale it</button>
+      <div class="big" id="s_pp">-</div>
+      <div class="cap">ml per part</div>
+      <table id="s_rows" style="display:none">
+        <tr><td>base notes</td><td id="s_base">-</td></tr>
+        <tr><td>heart notes</td><td id="s_heart">-</td></tr>
+        <tr><td>top notes</td><td id="s_top">-</td></tr>
+      </table>
+      <div class="err" id="s_err"></div>
+    </div>
+  </div>
+  <p class="foot">Exact dilution, conversion and scaling arithmetic. The strength bands, the 20-drops-per-ml norm and the blend-role labels are flagged perfumery norms. This does volumes only - it says nothing about allergen limits, IFRA categories or skin safety. <a href="index.html">Why this exists</a></p>
+</div>
+<script src="engine.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const g = id => parseFloat($(id).value);
+function show(id, txt) { const e = $(id); e.textContent = txt; e.style.display = txt ? 'inline-block' : 'none'; }
+document.getElementById('d_go').onclick = () => {
+  $('d_err').textContent = '';
+  try {
+    const r = Perfumemath.dilute(g('d_c'), g('d_p'));
+    $('d_alc').textContent = r.alcoholMl + ' ml';
+    show('d_verdict', r.verdict);
+    $('d_total').textContent = r.totalMl + ' ml';
+    $('d_rows').style.display = 'table';
+  } catch (e) { $('d_err').textContent = e.message; }
+};
+document.getElementById('dr_go').onclick = () => {
+  $('dr_err').textContent = '';
+  try {
+    const r = Perfumemath.drops(g('dr_d'), g('dr_m'), g('dr_t'));
+    $('dr_ml').textContent = r.ml + ' ml';
+    show('dr_verdict', r.verdict);
+    $('dr_pct').textContent = r.pctOfBlend + ' %';
+    $('dr_rows').style.display = 'table';
+  } catch (e) { $('dr_err').textContent = e.message; }
+};
+document.getElementById('s_go').onclick = () => {
+  $('s_err').textContent = '';
+  try {
+    const r = Perfumemath.scale(g('s_a'), g('s_b'), g('s_c'), g('s_t'));
+    $('s_pp').textContent = r.perPartMl + ' ml';
+    $('s_base').textContent = r.baseMl + ' ml';
+    $('s_heart').textContent = r.heartMl + ' ml';
+    $('s_top').textContent = r.topMl + ' ml';
+    $('s_rows').style.display = 'table';
+  } catch (e) { $('s_err').textContent = e.message; }
+};
+</script>
+</body>
+</html>
